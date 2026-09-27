@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Lightbulb, ScrollText, Copy, Check, PlayCircle, ImageIcon } from 'lucide-react'
+import { ArrowLeft, Lightbulb, ScrollText, Copy, Check, PlayCircle, ImageIcon, FileText, Download } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import PageShell from '../components/PageShell'
 import Loader from '../components/Loader'
@@ -34,7 +34,8 @@ export default function NicheDetail() {
       // Check access permission for regular users
       if (!isAdmin && user?.id && id) {
         const { data: isRestricted } = await supabase.rpc('niche_has_restrictions', { niche_uuid: id })
-        if (isRestricted) {
+        // If locked by admin or restricted to specific users, verify user access
+        if (currentNiche?.is_locked || isRestricted) {
           const { data: hasAccess } = await supabase.rpc('user_has_niche_access', { niche_uuid: id, user_uuid: user.id })
           if (!hasAccess) {
             setUnauthorized(true)
@@ -166,6 +167,35 @@ export default function NicheDetail() {
             <div className="rounded-lg border border-border-soft bg-surface-2 p-4 font-mono text-sm leading-relaxed text-text-muted">
               <LinkSafeText text={niche.prompt_text || 'No prompt has been added for this niche yet.'} />
             </div>
+
+            {/* Attached Document Resource (PDF / DOCX) */}
+            {niche.file_url && (
+              <div className="mt-4 flex items-center justify-between rounded-xl border border-sky-500/20 bg-sky-500/5 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-500/20 text-sky-400">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-text-primary">
+                      {niche.file_name || 'Niche Guide & Resource Document'}
+                    </h4>
+                    <p className="text-xs text-text-muted">
+                      {niche.file_url.endsWith('.pdf') ? 'PDF Document' : 'Word Document / File (.docx)'}
+                    </p>
+                  </div>
+                </div>
+
+                <a
+                  href={niche.file_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  download
+                  className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 px-3.5 py-2 text-xs font-semibold text-void shadow-md transition-all duration-200 hover:shadow-orange-500/20 active:scale-95"
+                >
+                  <Download size={14} /> Download
+                </a>
+              </div>
+            )}
           </motion.div>
         </div>
 
@@ -183,6 +213,19 @@ export default function NicheDetail() {
                 {tips.map((tip) => (
                   <li key={tip.id} className="rounded-lg border border-border-soft bg-surface-2 p-3 text-sm text-text-muted">
                     <LinkSafeText text={tip.text} />
+                    {tip.file_url && (
+                      <a
+                        href={tip.file_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        download
+                        className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-sky-500/20 bg-sky-500/5 px-2.5 py-1.5 text-xs font-medium text-sky-400 transition-colors hover:bg-sky-500/10"
+                      >
+                        <FileText size={12} />
+                        <span className="truncate max-w-[160px]">{tip.file_name || 'Download File'}</span>
+                        <Download size={11} className="ml-0.5 opacity-70" />
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -201,7 +244,23 @@ export default function NicheDetail() {
               <ul className="space-y-3">
                 {guidelines.map((g) => (
                   <li key={g.id} className="whitespace-pre-wrap rounded-lg border border-border-soft bg-surface-2 p-3 text-sm text-text-muted">
+                    {g.title && (
+                      <p className="mb-1 text-xs font-semibold text-text-primary">{g.title}</p>
+                    )}
                     <LinkSafeText text={g.text} />
+                    {g.file_url && (
+                      <a
+                        href={g.file_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        download
+                        className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-sky-500/20 bg-sky-500/5 px-2.5 py-1.5 text-xs font-medium text-sky-400 transition-colors hover:bg-sky-500/10"
+                      >
+                        <FileText size={12} />
+                        <span className="truncate max-w-[160px]">{g.file_name || 'Download File'}</span>
+                        <Download size={11} className="ml-0.5 opacity-70" />
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>

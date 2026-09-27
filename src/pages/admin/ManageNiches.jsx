@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Pencil, Trash2, FolderCog, ImageIcon, Video, UploadCloud, Users, Lightbulb, ScrollText, Check } from 'lucide-react'
+import { Plus, Pencil, Trash2, FolderCog, ImageIcon, Video, UploadCloud, Users, Lightbulb, ScrollText, Check, Lock, FileText } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import AdminShell from '../../components/AdminShell'
 import Loader from '../../components/Loader'
@@ -17,8 +17,12 @@ const emptyForm = {
   prompt_text: '',
   sample_video_url: '',
   sample_image_url: '',
+  file_url: '',
+  file_name: '',
   tips_text: '',
   guidelines_text: '',
+  is_locked: false,
+  price: '',
   access_type: 'all', // 'all' | 'specific'
   selected_user_ids: [],
 }
@@ -90,8 +94,12 @@ export default function ManageNiches() {
       prompt_text: niche.prompt_text ?? '',
       sample_video_url: niche.sample_video_url ?? '',
       sample_image_url: niche.sample_image_url ?? '',
+      file_url: niche.file_url ?? '',
+      file_name: niche.file_name ?? '',
       tips_text: tipsJoined,
       guidelines_text: guidelinesJoined,
+      is_locked: !!niche.is_locked,
+      price: niche.price ?? '',
       access_type: assignedUsers.length > 0 ? 'specific' : 'all',
       selected_user_ids: assignedUsers,
     })
@@ -114,7 +122,7 @@ export default function ManageNiches() {
     e.preventDefault()
     setSaving(true)
 
-    // Only save core niche fields — access control is handled via niche_access table
+    // Save core niche fields
     let finalForm = {
       name: form.name,
       has_image: form.has_image,
@@ -122,6 +130,10 @@ export default function ManageNiches() {
       prompt_text: form.prompt_text,
       sample_video_url: form.sample_video_url || '',
       sample_image_url: form.sample_image_url || '',
+      file_url: form.file_url || '',
+      file_name: form.file_name || '',
+      is_locked: form.is_locked,
+      price: form.price || '',
     }
 
     let targetNicheId = editingId
@@ -242,12 +254,23 @@ export default function ManageNiches() {
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-border-soft flex items-center justify-between">
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       {n.has_image && <span className="flex items-center gap-1 rounded-full border border-border-soft bg-surface-2 px-2 py-0.5 font-mono text-[10px] text-text-muted"><ImageIcon size={11} /> Image</span>}
                       {n.has_video && <span className="flex items-center gap-1 rounded-full border border-border-soft bg-surface-2 px-2 py-0.5 font-mono text-[10px] text-text-muted"><Video size={11} /> Video</span>}
+                      {n.file_url && <span className="flex items-center gap-1 rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 font-mono text-[10px] text-sky-400"><FileText size={11} /> Doc</span>}
+                      {n.is_locked && (
+                        <span className="flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-mono text-[10px] text-amber-500 font-medium">
+                          <Lock size={10} /> Locked
+                        </span>
+                      )}
+                      {n.price && (
+                        <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-orange-400">
+                          {n.price.startsWith('₱') || n.price.startsWith('$') ? n.price : `₱${n.price}`}
+                        </span>
+                      )}
                     </div>
 
-                    <span className="flex items-center gap-1 text-[11px] font-mono text-text-faint">
+                    <span className="flex items-center gap-1 text-[11px] font-mono text-text-faint shrink-0">
                       <Users size={12} className={assignedCount > 0 ? 'text-orange-500' : 'text-text-faint'} />
                       {assignedCount > 0 ? `${assignedCount} assigned` : 'All users'}
                     </span>
@@ -273,15 +296,45 @@ export default function ManageNiches() {
             />
           </div>
 
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2 text-sm text-text-muted">
-              <input type="checkbox" checked={form.has_image} onChange={(e) => setForm({ ...form, has_image: e.target.checked })} className="h-4 w-4 accent-orange-500" />
-              Include image
-            </label>
-            <label className="flex items-center gap-2 text-sm text-text-muted">
-              <input type="checkbox" checked={form.has_video} onChange={(e) => setForm({ ...form, has_video: e.target.checked })} className="h-4 w-4 accent-orange-500" />
-              Include video
-            </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-2 text-sm text-text-muted">
+                <input type="checkbox" checked={form.has_image} onChange={(e) => setForm({ ...form, has_image: e.target.checked })} className="h-4 w-4 accent-orange-500" />
+                Include image
+              </label>
+              <label className="flex items-center gap-2 text-sm text-text-muted">
+                <input type="checkbox" checked={form.has_video} onChange={(e) => setForm({ ...form, has_video: e.target.checked })} className="h-4 w-4 accent-orange-500" />
+                Include video
+              </label>
+            </div>
+
+            <div className="space-y-3 rounded-xl border border-border-soft bg-surface-2/40 p-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-text-primary cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.is_locked}
+                  onChange={(e) => setForm({ ...form, is_locked: e.target.checked })}
+                  className="h-4 w-4 accent-orange-500"
+                />
+                <Lock size={14} className={form.is_locked ? "text-amber-500" : "text-text-muted"} />
+                Lock Niche (Requires Unlock)
+              </label>
+
+              <div>
+                <label className="mb-1 block text-[11px] font-medium text-text-muted">
+                  Niche Price (Optional, e.g. 1500 or ₱1,500)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-sm font-semibold text-text-faint">₱</span>
+                  <input
+                    value={form.price.replace(/^₱\s?/, '')}
+                    onChange={(e) => setForm({ ...form, price: e.target.value ? `₱${e.target.value.replace(/^₱\s?/, '')}` : '' })}
+                    placeholder="e.g. 1,500 or Free"
+                    className="w-full rounded-lg border border-border bg-surface-2 pl-7 pr-3 py-1.5 text-sm text-text-primary placeholder:text-text-faint focus:border-orange-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* AI Prompt */}
@@ -346,6 +399,29 @@ export default function ManageNiches() {
             label="Sample Video Demo"
             onUploadSuccess={(url) => setForm((prev) => ({ ...prev, sample_video_url: url, has_video: true }))}
             onRemove={() => setForm((prev) => ({ ...prev, sample_video_url: '' }))}
+          />
+
+          {/* Niche Resource Document (PDF, DOCX) */}
+          <MediaUploader
+            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            bucket="documents"
+            folder="niches/documents"
+            currentUrl={form.file_url}
+            label="Niche Resource Document (PDF / DOCX)"
+            onUploadSuccess={(url, meta) => {
+              setForm((prev) => ({
+                ...prev,
+                file_url: url,
+                file_name: meta?.name || 'Document',
+              }))
+            }}
+            onRemove={() => {
+              setForm((prev) => ({
+                ...prev,
+                file_url: '',
+                file_name: '',
+              }))
+            }}
           />
 
           {/* User Access Controls */}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, Lightbulb, ScrollText } from 'lucide-react'
+import { Plus, Trash2, Lightbulb, ScrollText, FileText, Download } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import AdminShell from '../../components/AdminShell'
 import Loader from '../../components/Loader'
@@ -8,6 +8,7 @@ import EmptyState from '../../components/EmptyState'
 import Modal from '../../components/Modal'
 import Button from '../../components/Button'
 import ConfirmModal from '../../components/ConfirmModal'
+import MediaUploader from '../../components/MediaUploader'
 
 export default function ManageTipsGuidelines() {
   const [tab, setTab] = useState('tips') // 'tips' | 'guidelines'
@@ -16,7 +17,7 @@ export default function ManageTipsGuidelines() {
   const [guidelines, setGuidelines] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
-  const [form, setForm] = useState({ niche_id: '', title: '', text: '' })
+  const [form, setForm] = useState({ niche_id: '', title: '', text: '', file_url: '', file_name: '' })
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null) // { table, id }
 
@@ -36,7 +37,7 @@ export default function ManageTipsGuidelines() {
   useEffect(() => { load() }, [])
 
   function openCreate() {
-    setForm({ niche_id: '', title: '', text: '' })
+    setForm({ niche_id: '', title: '', text: '', file_url: '', file_name: '' })
     setModalOpen(true)
   }
 
@@ -45,8 +46,19 @@ export default function ManageTipsGuidelines() {
     setSaving(true)
     const table = tab === 'tips' ? 'tips' : 'guidelines'
     const payload = tab === 'guidelines'
-      ? { title: form.title, text: form.text, niche_id: form.niche_id || null }
-      : { text: form.text, niche_id: form.niche_id || null }
+      ? {
+          title: form.title,
+          text: form.text,
+          niche_id: form.niche_id || null,
+          file_url: form.file_url || '',
+          file_name: form.file_name || '',
+        }
+      : {
+          text: form.text,
+          niche_id: form.niche_id || null,
+          file_url: form.file_url || '',
+          file_name: form.file_name || '',
+        }
     await supabase.from(table).insert(payload)
     setSaving(false)
     setModalOpen(false)
@@ -127,11 +139,29 @@ export default function ManageTipsGuidelines() {
                 className="flex items-start justify-between gap-4 rounded-xl border border-border bg-surface p-4"
               >
                 <div className="min-w-0 flex-1">
-                  <span className="mb-1.5 inline-block rounded-full border border-border-soft bg-surface-2 px-2 py-0.5 font-mono text-[10px] text-text-faint">
-                    {nicheName(item.niche_id)}
-                  </span>
+                  <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-border-soft bg-surface-2 px-2 py-0.5 font-mono text-[10px] text-text-faint">
+                      {nicheName(item.niche_id)}
+                    </span>
+                    {item.file_url && (
+                      <span className="flex items-center gap-1 rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 font-mono text-[10px] text-sky-400">
+                        <FileText size={10} /> {item.file_name || 'Attached Doc'}
+                      </span>
+                    )}
+                  </div>
                   {item.title && <p className="mb-0.5 text-sm font-semibold text-text-primary">{item.title}</p>}
                   <p className="whitespace-pre-wrap text-sm text-text-muted">{item.text}</p>
+                  {item.file_url && (
+                    <a
+                      href={item.file_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      download
+                      className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-border-soft bg-surface-2 px-2.5 py-1 text-xs font-mono text-orange-400 hover:underline"
+                    >
+                      <Download size={12} /> Download file
+                    </a>
+                  )}
                 </div>
                 <button
                   onClick={() => requestDelete(activeTable, item.id)}
@@ -174,13 +204,37 @@ export default function ManageTipsGuidelines() {
             <label className="mb-1.5 block text-xs font-medium text-text-muted">Text</label>
             <textarea
               required
-              rows={5}
+              rows={4}
               value={form.text}
               onChange={(e) => setForm({ ...form, text: e.target.value })}
               placeholder="Write freely — links will render as plain text automatically."
               className="w-full resize-none rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-faint focus:border-orange-500 focus:outline-none"
             />
           </div>
+
+          {/* Attached Document */}
+          <MediaUploader
+            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            bucket="documents"
+            folder="resources"
+            currentUrl={form.file_url}
+            label={`Attach Reference File (${tab === 'tips' ? 'Tip' : 'Guideline'} PDF / DOCX)`}
+            onUploadSuccess={(url, meta) => {
+              setForm((prev) => ({
+                ...prev,
+                file_url: url,
+                file_name: meta?.name || 'Document',
+              }))
+            }}
+            onRemove={() => {
+              setForm((prev) => ({
+                ...prev,
+                file_url: '',
+                file_name: '',
+              }))
+            }}
+          />
+
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>Cancel</Button>
             <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>

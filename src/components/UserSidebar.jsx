@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LayoutGrid, LogOut, Film, Menu, X, MessageSquare } from 'lucide-react'
+import { LayoutGrid, LogOut, Film, Menu, X, MessageSquare, Megaphone } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import ConfirmModal from './ConfirmModal'
 
 const userLinks = [
   { to: '/dashboard', label: 'Watch', icon: LayoutGrid },
+  { to: '/announcements', label: 'Announcements', icon: Megaphone },
   { to: '/support', label: 'Support', icon: MessageSquare },
 ]
 

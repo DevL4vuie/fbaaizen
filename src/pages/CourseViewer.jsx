@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, PlayCircle, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, PlayCircle, CheckCircle2, FileText, Download } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import PageShell from '../components/PageShell'
@@ -101,6 +101,35 @@ export default function CourseViewer() {
                 {percent >= 100 ? 'Course complete' : 'Mark lesson complete'}
               </button>
             </div>
+
+            {/* Course Resource Document (PDF / DOCX) */}
+            {course.file_url && (
+              <div className="flex items-center justify-between rounded-2xl border border-sky-500/20 bg-sky-500/5 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-500/20 text-sky-400">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-text-primary">
+                      {course.file_name || 'Course Materials & Syllabus'}
+                    </h4>
+                    <p className="text-xs text-text-muted">
+                      {course.file_url.endsWith('.pdf') ? 'PDF Document' : 'Resource Document / File (.docx)'}
+                    </p>
+                  </div>
+                </div>
+
+                <a
+                  href={course.file_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  download
+                  className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 px-3.5 py-2 text-xs font-semibold text-void shadow-md transition-all duration-200 hover:shadow-orange-500/20 active:scale-95"
+                >
+                  <Download size={14} /> Download
+                </a>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

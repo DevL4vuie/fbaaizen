@@ -6,6 +6,7 @@ import {
   AlertCircle,
   FileVideo,
   FileImage,
+  FileText,
   X,
   Loader2,
   RefreshCw,
@@ -43,6 +44,7 @@ export default function MediaUploader({
 
   const isVideo = accept.includes('video')
   const isImage = accept.includes('image')
+  const isDoc = accept.includes('pdf') || accept.includes('doc') || accept.includes('word') || bucket === 'documents'
 
   function handleFileSelect(selectedFile) {
     if (!selectedFile) return
@@ -139,7 +141,7 @@ export default function MediaUploader({
       {label && (
         <div className="flex items-center justify-between">
           <label className="text-xs font-medium text-text-muted flex items-center gap-1.5">
-            {isVideo ? <FileVideo size={13} className="text-orange-500" /> : <FileImage size={13} className="text-orange-500" />}
+            {isVideo ? <FileVideo size={13} className="text-orange-500" /> : isDoc ? <FileText size={13} className="text-orange-500" /> : <FileImage size={13} className="text-orange-500" />}
             {label}
           </label>
           {preview && (
@@ -262,7 +264,7 @@ export default function MediaUploader({
               <span className="text-orange-500 underline underline-offset-2">Click to browse</span> or drag and drop
             </p>
             <p className="font-mono text-[10px] text-text-faint">
-              {isVideo ? 'MP4, WebM, MOV (video)' : 'JPG, PNG, GIF, WebP (image)'}
+              {isVideo ? 'MP4, WebM, MOV (video)' : isDoc ? 'PDF, DOCX, DOC files' : 'JPG, PNG, GIF, WebP (image)'}
             </p>
           </div>
         )}
@@ -281,6 +283,26 @@ export default function MediaUploader({
               controls
               className="max-h-48 w-full rounded-lg bg-black object-contain"
             />
+          ) : isDoc ? (
+            <div className="flex items-center justify-between p-3 rounded-lg bg-surface-2 border border-border-soft">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-orange-500/10 text-orange-500">
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-text-primary">{file?.name || 'Attached Document'}</p>
+                  <p className="text-[10px] font-mono text-text-faint">PDF / Word Document</p>
+                </div>
+              </div>
+              <a
+                href={preview}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1 text-xs font-medium text-orange-500 hover:underline"
+              >
+                <ExternalLink size={13} /> Open
+              </a>
+            </div>
           ) : (
             <div className="flex items-center justify-center bg-black/20 rounded-lg p-1">
               <img

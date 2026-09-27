@@ -6,12 +6,14 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import NicheDetail from './pages/NicheDetail'
 import CourseViewer from './pages/CourseViewer'
+import Announcements from './pages/Announcements'
 
 import AdminDashboard from './pages/admin/AdminDashboard'
 import ManageNiches from './pages/admin/ManageNiches'
 import ManageTipsGuidelines from './pages/admin/ManageTipsGuidelines'
 import ManageCourses from './pages/admin/ManageCourses'
 import ManageUsers from './pages/admin/ManageUsers'
+import ManageAnnouncements from './pages/admin/ManageAnnouncements'
 import AdminSupport from './pages/admin/AdminSupport'
 import Support from './pages/Support'
 
@@ -34,12 +36,14 @@ export default function App() {
 
           {/* User-facing routes */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
           <Route path="/niche/:id" element={<ProtectedRoute><NicheDetail /></ProtectedRoute>} />
           <Route path="/course/:id" element={<ProtectedRoute><CourseViewer /></ProtectedRoute>} />
           <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
 
           {/* Admin-only routes */}
           <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+          <Route path="/admin/announcements" element={<AdminRoute><ManageAnnouncements /></AdminRoute>} />
           <Route path="/admin/niches" element={<AdminRoute><ManageNiches /></AdminRoute>} />
           <Route path="/admin/tips-guidelines" element={<AdminRoute><ManageTipsGuidelines /></AdminRoute>} />
           <Route path="/admin/courses" element={<AdminRoute><ManageCourses /></AdminRoute>} />

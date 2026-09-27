@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Pencil, Trash2, GraduationCap, X, UploadCloud } from 'lucide-react'
+import { Plus, Pencil, Trash2, GraduationCap, X, UploadCloud, FileText } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import AdminShell from '../../components/AdminShell'
 import Loader from '../../components/Loader'
@@ -10,7 +10,15 @@ import Button from '../../components/Button'
 import ConfirmModal from '../../components/ConfirmModal'
 import MediaUploader from '../../components/MediaUploader'
 
-const emptyForm = { title: '', description: '', niche_id: '', video_urls: [''] }
+const emptyForm = {
+  title: '',
+  description: '',
+  niche_id: '',
+  price: '',
+  file_url: '',
+  file_name: '',
+  video_urls: [''],
+}
 
 export default function ManageCourses() {
   const [courses, setCourses] = useState([])
@@ -50,6 +58,9 @@ export default function ManageCourses() {
       title: course.title,
       description: course.description ?? '',
       niche_id: course.niche_id ?? '',
+      price: course.price ?? '',
+      file_url: course.file_url ?? '',
+      file_name: course.file_name ?? '',
       video_urls: course.video_urls?.length ? course.video_urls : [''],
     })
     setVideoFiles((course.video_urls?.length ? course.video_urls : ['']).map(() => null))
@@ -79,6 +90,9 @@ export default function ManageCourses() {
       title: form.title,
       description: form.description,
       niche_id: form.niche_id || null,
+      price: form.price || '',
+      file_url: form.file_url || '',
+      file_name: form.file_name || '',
       video_urls: form.video_urls.filter((u) => u && u.trim() !== ''),
     }
     if (editingId) {
@@ -142,10 +156,20 @@ export default function ManageCourses() {
                   </div>
                 </div>
                 <p className="mb-3 line-clamp-2 text-sm text-text-muted">{c.description || 'No description.'}</p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full border border-border-soft bg-surface-2 px-2 py-1 font-mono text-[10px] text-text-muted">
                     {(c.video_urls?.length ?? 0)} lesson{(c.video_urls?.length ?? 0) === 1 ? '' : 's'}
                   </span>
+                  {c.file_url && (
+                    <span className="flex items-center gap-1 rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 font-mono text-[10px] text-sky-400">
+                      <FileText size={10} /> Doc
+                    </span>
+                  )}
+                  {c.price && (
+                    <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-orange-400">
+                      {c.price.startsWith('₱') || c.price.startsWith('$') ? c.price : `₱${c.price}`}
+                    </span>
+                  )}
                   {nicheName(c.niche_id) && (
                     <span className="rounded-full border border-orange-500/30 bg-orange-500/5 px-2 py-1 font-mono text-[10px] text-orange-500">
                       {nicheName(c.niche_id)}
@@ -180,17 +204,55 @@ export default function ManageCourses() {
             />
           </div>
 
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-text-muted">Linked niche (optional)</label>
-            <select
-              value={form.niche_id}
-              onChange={(e) => setForm({ ...form, niche_id: e.target.value })}
-              className="w-full rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 text-sm text-text-primary focus:border-orange-500 focus:outline-none"
-            >
-              <option value="">None</option>
-              {niches.map((n) => <option key={n.id} value={n.id}>{n.name}</option>)}
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-text-muted">Course Price (Optional)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-sm font-semibold text-text-faint">₱</span>
+                <input
+                  value={form.price.replace(/^₱\s?/, '')}
+                  onChange={(e) => setForm({ ...form, price: e.target.value ? `₱${e.target.value.replace(/^₱\s?/, '')}` : '' })}
+                  placeholder="e.g. 2,999 or Free"
+                  className="w-full rounded-lg border border-border bg-surface-2 pl-7 pr-3 py-2 text-sm text-text-primary focus:border-orange-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-text-muted">Linked niche (optional)</label>
+              <select
+                value={form.niche_id}
+                onChange={(e) => setForm({ ...form, niche_id: e.target.value })}
+                className="w-full rounded-lg border border-border bg-surface-2 px-3.5 py-2 text-sm text-text-primary focus:border-orange-500 focus:outline-none"
+              >
+                <option value="">None</option>
+                {niches.map((n) => <option key={n.id} value={n.id}>{n.name}</option>)}
+              </select>
+            </div>
           </div>
+
+          {/* Course Material Document (PDF / DOCX) */}
+          <MediaUploader
+            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            bucket="documents"
+            folder="courses/documents"
+            currentUrl={form.file_url}
+            label="Course Syllabus / Material Document (PDF, DOCX)"
+            onUploadSuccess={(url, meta) => {
+              setForm((prev) => ({
+                ...prev,
+                file_url: url,
+                file_name: meta?.name || 'Course Document',
+              }))
+            }}
+            onRemove={() => {
+              setForm((prev) => ({
+                ...prev,
+                file_url: '',
+                file_name: '',
+              }))
+            }}
+          />
 
           <div>
             <label className="mb-2 block text-xs font-medium text-text-muted">Lesson videos (in order)</label>

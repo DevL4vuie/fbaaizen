@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LayoutGrid, Users, FolderCog, Lightbulb, GraduationCap, LogOut, ShieldCheck, Menu, X, MessageSquare } from 'lucide-react'
+import { LayoutGrid, Users, FolderCog, Lightbulb, GraduationCap, LogOut, ShieldCheck, Menu, X, MessageSquare, Megaphone } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import ConfirmModal from './ConfirmModal'
 
 const adminLinks = [
   { to: '/admin', label: 'Overview', icon: LayoutGrid, end: true },
+  { to: '/admin/announcements', label: 'Announcements', icon: Megaphone },
   { to: '/admin/niches', label: 'Niches', icon: FolderCog },
   { to: '/admin/tips-guidelines', label: 'Tips & Guidelines', icon: Lightbulb },
   { to: '/admin/courses', label: 'Courses', icon: GraduationCap },
