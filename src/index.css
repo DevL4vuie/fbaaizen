@@ -1,0 +1,155 @@
+@import "tailwindcss";
+
+@theme {
+  /* ---- Color tokens: black + orange gradient identity ---- */
+  --color-void: #08080a;
+  --color-surface: #131316;
+  --color-surface-2: #1b1b1f;
+  --color-surface-3: #232327;
+  --color-border: #2a2a30;
+  --color-border-soft: #1f1f24;
+
+  --color-orange-500: #ff6a1a;
+  --color-orange-600: #ff8a3d;
+  --color-orange-700: #e0530f;
+  --color-amber-glow: #ffb347;
+
+  --color-text-primary: #f5f3ef;
+  --color-text-muted: #9a9aa2;
+  --color-text-faint: #6a6a72;
+
+  --color-success: #34d399;
+  --color-danger: #ef4444;
+
+  --font-display: "Space Grotesk", "Inter", sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-void);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(255, 106, 26, 0.14), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(255, 138, 61, 0.08), transparent);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-surface-3) transparent;
+}
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: var(--color-surface-3); border-radius: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+
+:focus-visible {
+  outline: 2px solid var(--color-orange-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.font-display { font-family: var(--font-display); }
+.font-mono { font-family: var(--font-mono); }
+
+/* Gradient text used sparingly for signature moments */
+.text-gradient-flame {
+  background: linear-gradient(90deg, var(--color-orange-600), var(--color-amber-glow));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Signature: animated sweeping gradient border for niche/course cards */
+.flame-border {
+  position: relative;
+  border-radius: 1rem;
+  background: var(--color-surface);
+  isolation: isolate;
+}
+.flame-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(120deg, transparent 20%, var(--color-orange-500), var(--color-amber-glow), transparent 80%);
+  background-size: 250% 250%;
+  background-position: 0% 50%;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: -1;
+}
+.flame-border:hover::before {
+  opacity: 1;
+  animation: sweep 2.4s linear infinite;
+}
+@keyframes sweep {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+/* Live/record pulse dot */
+.pulse-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-orange-500);
+}
+.pulse-dot::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 999px;
+  background: var(--color-orange-500);
+  opacity: 0.5;
+  animation: pulse-ring 1.8s ease-out infinite;
+}
+@keyframes pulse-ring {
+  0% { transform: scale(0.6); opacity: 0.5; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+/* Global input / select / textarea hover & focus polish */
+input, select, textarea {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+input:hover:not(:focus), select:hover:not(:focus), textarea:hover:not(:focus) {
+  border-color: var(--color-border);
+  box-shadow: 0 0 0 1px rgba(255,106,26,0.15);
+}
+
+/* Clickable rows */
+.hover-row {
+  transition: background-color 0.15s ease;
+}
+.hover-row:hover {
+  background-color: var(--color-surface-2);
+}
+
+/* Card lift on hover */
+.card-hover {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 32px rgba(255,106,26,0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
