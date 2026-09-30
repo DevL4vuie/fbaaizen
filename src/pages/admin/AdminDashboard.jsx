@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Users, FolderCog, GraduationCap, Lightbulb, Clock, Activity, LogIn, Eye, MessageSquarePlus, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabaseClient'
+import { useAuth } from '../../context/AuthContext'
 import AdminShell from '../../components/AdminShell'
 import Loader from '../../components/Loader'
 import EmptyState from '../../components/EmptyState'
@@ -45,6 +46,7 @@ function getActionBadge(action) {
 }
 
 export default function AdminDashboard() {
+  const { user, isSuperAdmin, selectedAdminId } = useAuth()
   const [stats, setStats] = useState(null)
   const [recentUsers, setRecentUsers] = useState([])
   const [activityLogs, setActivityLogs] = useState([])
@@ -54,11 +56,37 @@ export default function AdminDashboard() {
   const [confirmClearOpen, setConfirmClearOpen] = useState(false)
 
   async function load() {
+    let usersQuery = supabase.from('profiles').select('*').eq('role', 'user').order('created_at', { ascending: false })
+    let nichesQuery = supabase.from('niches').select('id', { count: 'exact', head: true })
+    let coursesQuery = supabase.from('courses').select('id', { count: 'exact', head: true })
+    let tipsQuery = supabase.from('tips').select('id', { count: 'exact', head: true })
+
+    if (!isSuperAdmin) {
+      if (user?.id) {
+        usersQuery = usersQuery.eq('created_by_admin_id', user.id)
+        nichesQuery = nichesQuery.eq('creator_id', user.id)
+        coursesQuery = coursesQuery.eq('creator_id', user.id)
+        tipsQuery = tipsQuery.eq('creator_id', user.id)
+      }
+    } else {
+      if (selectedAdminId === 'mine') {
+        usersQuery = usersQuery.eq('created_by_admin_id', user?.id)
+        nichesQuery = nichesQuery.eq('creator_id', user?.id)
+        coursesQuery = coursesQuery.eq('creator_id', user?.id)
+        tipsQuery = tipsQuery.eq('creator_id', user?.id)
+      } else if (selectedAdminId && selectedAdminId !== 'all') {
+        usersQuery = usersQuery.eq('created_by_admin_id', selectedAdminId)
+        nichesQuery = nichesQuery.eq('creator_id', selectedAdminId)
+        coursesQuery = coursesQuery.eq('creator_id', selectedAdminId)
+        tipsQuery = tipsQuery.eq('creator_id', selectedAdminId)
+      }
+    }
+
     const [users, niches, courses, tips, logsRes] = await Promise.all([
-      supabase.from('profiles').select('*').order('created_at', { ascending: false }),
-      supabase.from('niches').select('id', { count: 'exact', head: true }),
-      supabase.from('courses').select('id', { count: 'exact', head: true }),
-      supabase.from('tips').select('id', { count: 'exact', head: true }),
+      usersQuery,
+      nichesQuery,
+      coursesQuery,
+      tipsQuery,
       supabase
         .from('activity_logs')
         .select('*, profiles(name, email)')
@@ -83,7 +111,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     load()
-  }, [])
+  }, [isSuperAdmin, user?.id, selectedAdminId])
 
   async function handleClearLogs() {
     setClearing(true)

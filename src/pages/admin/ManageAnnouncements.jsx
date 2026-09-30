@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Pencil, Trash2, Megaphone, FileText, Pin, ExternalLink, Download } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
+import { useAuth } from '../../context/AuthContext'
 import AdminShell from '../../components/AdminShell'
 import Loader from '../../components/Loader'
 import EmptyState from '../../components/EmptyState'
@@ -20,6 +21,7 @@ const emptyForm = {
 }
 
 export default function ManageAnnouncements() {
+  const { user, isSuperAdmin, selectedAdminId } = useAuth()
   const [announcements, setAnnouncements] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
@@ -33,11 +35,25 @@ export default function ManageAnnouncements() {
   async function load() {
     setLoading(true)
     setErrorMessage('')
-    const { data, error } = await supabase
+    let query = supabase
       .from('announcements')
       .select('*')
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: false })
+
+    if (!isSuperAdmin) {
+      if (user?.id) {
+        query = query.eq('creator_id', user.id)
+      }
+    } else {
+      if (selectedAdminId === 'mine') {
+        query = query.eq('creator_id', user?.id)
+      } else if (selectedAdminId && selectedAdminId !== 'all') {
+        query = query.eq('creator_id', selectedAdminId)
+      }
+    }
+
+    const { data, error } = await query
 
     if (error) {
       console.error('Error loading announcements:', error)
@@ -56,7 +72,7 @@ export default function ManageAnnouncements() {
 
   useEffect(() => {
     load()
-  }, [])
+  }, [isSuperAdmin, user?.id, selectedAdminId])
 
   function openCreate() {
     setEditingId(null)
@@ -98,7 +114,10 @@ export default function ManageAnnouncements() {
     if (editingId) {
       res = await supabase.from('announcements').update(payload).eq('id', editingId)
     } else {
-      res = await supabase.from('announcements').insert(payload)
+      res = await supabase.from('announcements').insert({
+        ...payload,
+        creator_id: user?.id,
+      })
     }
 
     if (res.error) {

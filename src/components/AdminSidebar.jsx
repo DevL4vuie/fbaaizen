@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LayoutGrid, Users, FolderCog, Lightbulb, GraduationCap, LogOut, ShieldCheck, Menu, X, MessageSquare, Megaphone } from 'lucide-react'
+import { LayoutGrid, Users, FolderCog, Lightbulb, GraduationCap, LogOut, ShieldCheck, Menu, X, MessageSquare, Megaphone, Crown } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import ConfirmModal from './ConfirmModal'
 
-const adminLinks = [
+const baseAdminLinks = [
   { to: '/admin', label: 'Overview', icon: LayoutGrid, end: true },
   { to: '/admin/announcements', label: 'Announcements', icon: Megaphone },
   { to: '/admin/niches', label: 'Niches', icon: FolderCog },
@@ -15,10 +15,14 @@ const adminLinks = [
   { to: '/admin/support', label: 'User Requests', icon: MessageSquare },
 ]
 
-function NavLinks({ onClick }) {
+function NavLinks({ isSuperAdmin, onClick }) {
+  const links = isSuperAdmin
+    ? [{ to: '/admin/creator-admins', label: 'Creator Admins', icon: Crown }, ...baseAdminLinks]
+    : baseAdminLinks
+
   return (
     <nav className="flex-1 space-y-1 px-3">
-      {adminLinks.map(({ to, label, icon: Icon, end }) => (
+      {links.map(({ to, label, icon: Icon, end }) => (
         <NavLink
           key={to}
           to={to}
@@ -44,7 +48,7 @@ function NavLinks({ onClick }) {
   )
 }
 
-function AdminFooter({ profile, onLogout }) {
+function AdminFooter({ profile, isSuperAdmin, onLogout }) {
   return (
     <div className="mx-3 mb-3 flex items-center gap-3 rounded-lg border border-orange-500/20 bg-orange-500/5 px-3 py-3 transition-colors duration-200 hover:bg-orange-500/10">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500/20 font-display text-xs font-semibold text-orange-500">
@@ -52,7 +56,9 @@ function AdminFooter({ profile, onLogout }) {
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-medium text-text-primary">{profile?.name ?? 'Loading…'}</p>
-        <p className="truncate font-mono text-[10px] text-orange-500/60">Admin</p>
+        <p className="truncate font-mono text-[10px] text-orange-500/80">
+          {isSuperAdmin ? 'Superadmin (Owner)' : 'Creator Admin'}
+        </p>
       </div>
       <button
         onClick={onLogout}
@@ -66,7 +72,7 @@ function AdminFooter({ profile, onLogout }) {
 }
 
 function SidebarContent({ onClose }) {
-  const { profile, signOut } = useAuth()
+  const { profile, isSuperAdmin, signOut } = useAuth()
   const navigate = useNavigate()
   const [confirmOpen, setConfirmOpen] = useState(false)
 
@@ -83,8 +89,12 @@ function SidebarContent({ onClose }) {
             <ShieldCheck size={18} className="text-void" strokeWidth={2.5} />
           </div>
           <div>
-            <p className="font-display text-[15px] font-semibold leading-tight text-text-primary">Azein Studio</p>
-            <p className="font-mono text-[10px] uppercase tracking-wider text-orange-500/70">Admin Console</p>
+            <p className="font-display text-[15px] font-semibold leading-tight text-text-primary">
+              {profile?.studio_name || 'Azein Studio'}
+            </p>
+            <p className="font-mono text-[10px] uppercase tracking-wider text-orange-500/70">
+              {isSuperAdmin ? 'Superadmin Master' : 'Admin Console'}
+            </p>
           </div>
         </div>
         {onClose && (
@@ -94,7 +104,7 @@ function SidebarContent({ onClose }) {
         )}
       </div>
 
-      <NavLinks onClick={onClose} />
+      <NavLinks isSuperAdmin={isSuperAdmin} onClick={onClose} />
 
       <div className="px-3 pb-3">
         <NavLink
@@ -105,7 +115,7 @@ function SidebarContent({ onClose }) {
         </NavLink>
       </div>
 
-      <AdminFooter profile={profile} onLogout={() => setConfirmOpen(true)} />
+      <AdminFooter profile={profile} isSuperAdmin={isSuperAdmin} onLogout={() => setConfirmOpen(true)} />
 
       <ConfirmModal
         open={confirmOpen}

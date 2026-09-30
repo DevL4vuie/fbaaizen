@@ -1,7 +1,10 @@
 import { motion } from 'framer-motion'
+import { Crown } from 'lucide-react'
 import AdminSidebar from './AdminSidebar'
+import { useAuth } from '../context/AuthContext'
 
 export default function AdminShell({ eyebrow, title, description, actions, children }) {
+  const { isSuperAdmin, selectedAdminId, setSelectedAdminId, adminList } = useAuth()
   return (
     <div className="flex min-h-screen flex-col bg-void lg:flex-row">
       <AdminSidebar />
@@ -24,7 +27,36 @@ export default function AdminShell({ eyebrow, title, description, actions, child
                 {title && <h1 className="font-display text-xl font-semibold text-text-primary sm:text-2xl">{title}</h1>}
                 {description && <p className="mt-1.5 max-w-xl text-sm text-text-muted">{description}</p>}
               </div>
-              {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+              <div className="flex shrink-0 flex-wrap items-center gap-2.5">
+                {isSuperAdmin && adminList.length > 0 && (
+                  <div className="flex items-center gap-2 rounded-xl border border-orange-500/30 bg-surface-2/80 px-3 py-1.5 shadow-sm">
+                    <Crown size={14} className="text-orange-400 shrink-0" />
+                    <span className="font-mono text-xs text-text-faint whitespace-nowrap">Viewing:</span>
+                    <select
+                      value={selectedAdminId}
+                      onChange={(e) => setSelectedAdminId(e.target.value)}
+                      className="cursor-pointer bg-transparent text-xs font-semibold text-orange-400 focus:outline-none"
+                    >
+                      <option value="all" className="bg-surface text-text-primary">
+                        🌍 All Workspaces (Global)
+                      </option>
+                      <option value="mine" className="bg-surface text-text-primary">
+                        👑 Superadmin Only (My Content)
+                      </option>
+                      <optgroup label="Creator Admin Tenants" className="bg-surface text-text-muted">
+                        {adminList
+                          .filter((adm) => adm.role === 'admin')
+                          .map((adm) => (
+                            <option key={adm.id} value={adm.id} className="bg-surface text-text-primary">
+                              👤 {adm.name} {adm.studio_name ? `(${adm.studio_name})` : ''}
+                            </option>
+                          ))}
+                      </optgroup>
+                    </select>
+                  </div>
+                )}
+                {actions}
+              </div>
             </div>
           )}
           {children}

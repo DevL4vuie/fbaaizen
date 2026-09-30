@@ -70,7 +70,16 @@ export function AuthProvider({ children }) {
       setUser(currentUser)
       if (currentUser) {
         const p = await loadProfile(currentUser.id, currentUser.email, currentUser.user_metadata)
-        if (mounted) setProfile(p)
+        if (mounted) {
+          if (p?.banned || p?.is_archived) {
+            await supabase.auth.signOut()
+            setUser(null)
+            setProfile(null)
+            setLoading(false)
+            return
+          }
+          setProfile(p)
+        }
       } else {
         setProfile(null)
       }
@@ -87,6 +96,12 @@ export function AuthProvider({ children }) {
         if (currentUser) {
           const p = await loadProfile(currentUser.id, currentUser.email, currentUser.user_metadata)
           if (mounted) {
+            if (p?.banned || p?.is_archived) {
+              await supabase.auth.signOut()
+              setUser(null)
+              setProfile(null)
+              return
+            }
             setProfile(p)
             supabase.from('profiles').update({ last_active: new Date().toISOString() }).eq('id', currentUser.id).then(() => {})
           }
@@ -116,6 +131,10 @@ export function AuthProvider({ children }) {
         await supabase.auth.signOut()
         return { error: { message: 'Your account has been banned. Contact an admin.' } }
       }
+      if (p?.is_archived) {
+        await supabase.auth.signOut()
+        return { error: { message: 'Your account has been deleted/archived. Contact an admin.' } }
+      }
       logActivity(data.user.id, ACTIONS.LOGIN, { email: data.user.email })
       return { data: { ...data, profile: p }, error: null }
     }
@@ -133,8 +152,34 @@ export function AuthProvider({ children }) {
   }
 
   const role = profile?.role || 'user'
-  const isAdmin = role === 'admin'
+  const isSuperAdmin = role === 'superadmin'
+  const isAdmin = role === 'admin' || role === 'superadmin'
+  const isCreatorAdmin = role === 'admin'
   const isUser = role === 'user'
+
+  // Superadmin tenant switcher: 'all' | 'mine' | adminId
+  const [selectedAdminId, setSelectedAdminId] = useState('all')
+  const [adminList, setAdminList] = useState([])
+
+  // Load list of creator admins for superadmin selector
+  useEffect(() => {
+    if (isSuperAdmin) {
+      supabase
+        .from('profiles')
+        .select('id, name, email, studio_name, role')
+        .in('role', ['admin', 'superadmin'])
+        .order('name')
+        .then(({ data }) => {
+          if (data) setAdminList(data)
+        })
+    } else {
+      setAdminList([])
+    }
+  }, [isSuperAdmin])
+
+  // The creator ID this account belongs to:
+  // For admins/superadmins, it's their own ID. For users, it's the admin who created them.
+  const creatorId = (isAdmin ? user?.id : profile?.created_by_admin_id) || user?.id
 
   const hasRole = (requiredRole) => {
     if (!profile) return false
@@ -150,7 +195,13 @@ export function AuthProvider({ children }) {
       profile,
       role,
       isAdmin,
+      isSuperAdmin,
+      isCreatorAdmin,
       isUser,
+      creatorId,
+      selectedAdminId,
+      setSelectedAdminId,
+      adminList,
       hasRole,
       loading,
       signIn,

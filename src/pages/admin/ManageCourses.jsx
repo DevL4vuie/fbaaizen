@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Pencil, Trash2, GraduationCap, X, UploadCloud, FileText } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
+import { useAuth } from '../../context/AuthContext'
 import AdminShell from '../../components/AdminShell'
 import Loader from '../../components/Loader'
 import EmptyState from '../../components/EmptyState'
@@ -21,6 +22,7 @@ const emptyForm = {
 }
 
 export default function ManageCourses() {
+  const { user, isSuperAdmin, selectedAdminId } = useAuth()
   const [courses, setCourses] = useState([])
   const [niches, setNiches] = useState([])
   const [loading, setLoading] = useState(true)
@@ -34,16 +36,34 @@ export default function ManageCourses() {
 
   async function load() {
     setLoading(true)
+    let courseQuery = supabase.from('courses').select('*').order('created_at', { ascending: false })
+    let nicheQuery = supabase.from('niches').select('id,name').order('name')
+
+    if (!isSuperAdmin) {
+      if (user?.id) {
+        courseQuery = courseQuery.eq('creator_id', user.id)
+        nicheQuery = nicheQuery.eq('creator_id', user.id)
+      }
+    } else {
+      if (selectedAdminId === 'mine') {
+        courseQuery = courseQuery.eq('creator_id', user?.id)
+        nicheQuery = nicheQuery.eq('creator_id', user?.id)
+      } else if (selectedAdminId && selectedAdminId !== 'all') {
+        courseQuery = courseQuery.eq('creator_id', selectedAdminId)
+        nicheQuery = nicheQuery.eq('creator_id', selectedAdminId)
+      }
+    }
+
     const [c, n] = await Promise.all([
-      supabase.from('courses').select('*').order('created_at', { ascending: false }),
-      supabase.from('niches').select('id,name').order('name'),
+      courseQuery,
+      nicheQuery,
     ])
     setCourses(c.data ?? [])
     setNiches(n.data ?? [])
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [isSuperAdmin, user?.id, selectedAdminId])
 
   function openCreate() {
     setEditingId(null)
@@ -98,7 +118,10 @@ export default function ManageCourses() {
     if (editingId) {
       await supabase.from('courses').update(payload).eq('id', editingId)
     } else {
-      await supabase.from('courses').insert(payload)
+      await supabase.from('courses').insert({
+        ...payload,
+        creator_id: user?.id,
+      })
     }
     setSaving(false)
     setModalOpen(false)

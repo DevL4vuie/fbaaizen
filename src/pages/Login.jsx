@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Film, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -29,7 +29,8 @@ export default function Login() {
     if (signInErr) {
       setError(signInErr.message || 'Failed to sign in')
     } else if (data?.user) {
-      const destination = data?.profile?.role === 'admin' ? '/admin' : '/dashboard'
+      const role = data?.profile?.role
+      const destination = (role === 'admin' || role === 'superadmin') ? '/admin' : '/dashboard'
       navigate(destination, { replace: true })
     }
   }
@@ -90,10 +91,19 @@ export default function Login() {
         transition={{ duration: 0.5, ease: 'easeOut' }}
         className="relative w-full max-w-sm"
       >
+        <div className="mb-4">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-text-muted transition-colors hover:text-orange-400"
+          >
+            ← Back to Home
+          </Link>
+        </div>
+
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-glow shadow-lg shadow-orange-500/30">
+          <Link to="/" className="group mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-glow shadow-lg shadow-orange-500/30 transition-transform hover:scale-105">
             <Film size={22} className="text-void" strokeWidth={2.5} />
-          </div>
+          </Link>
           <h1 className="font-display text-2xl font-semibold text-text-primary">Azein Studio</h1>
           <p className="mt-1 font-mono text-xs uppercase tracking-wider text-text-faint">
             Creator Training Platform

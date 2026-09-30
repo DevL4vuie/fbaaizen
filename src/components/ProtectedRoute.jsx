@@ -64,6 +64,10 @@ export function RoleRoute({ allowedRoles = ['admin'], children }) {
 }
 
 export function AdminRoute({ children }) {
-  return <RoleRoute allowedRoles={['admin']}>{children}</RoleRoute>
+  return <RoleRoute allowedRoles={['admin', 'superadmin']}>{children}</RoleRoute>
+}
+
+export function SuperAdminRoute({ children }) {
+  return <RoleRoute allowedRoles={['superadmin']}>{children}</RoleRoute>
 }
 

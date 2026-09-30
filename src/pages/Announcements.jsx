@@ -7,7 +7,10 @@ import PageShell from '../components/PageShell'
 import Loader from '../components/Loader'
 import EmptyState from '../components/EmptyState'
 
+import { useAuth } from '../context/AuthContext'
+
 export default function Announcements() {
+  const { isSuperAdmin, creatorId } = useAuth()
   const [announcements, setAnnouncements] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -15,11 +18,17 @@ export default function Announcements() {
     async function load() {
       setLoading(true)
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('announcements')
           .select('*')
           .order('is_pinned', { ascending: false })
           .order('created_at', { ascending: false })
+
+        if (!isSuperAdmin && creatorId) {
+          query = query.eq('creator_id', creatorId)
+        }
+
+        const { data, error } = await query
 
         if (error) {
           console.error('Announcements load error:', error)
@@ -32,7 +41,7 @@ export default function Announcements() {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [isSuperAdmin, creatorId])
 
   return (
     <PageShell

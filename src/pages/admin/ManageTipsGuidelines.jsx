@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Trash2, Lightbulb, ScrollText, FileText, Download } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
+import { useAuth } from '../../context/AuthContext'
 import AdminShell from '../../components/AdminShell'
 import Loader from '../../components/Loader'
 import EmptyState from '../../components/EmptyState'
@@ -11,6 +12,7 @@ import ConfirmModal from '../../components/ConfirmModal'
 import MediaUploader from '../../components/MediaUploader'
 
 export default function ManageTipsGuidelines() {
+  const { user, isSuperAdmin, selectedAdminId } = useAuth()
   const [tab, setTab] = useState('tips') // 'tips' | 'guidelines'
   const [niches, setNiches] = useState([])
   const [tips, setTips] = useState([])
@@ -23,10 +25,32 @@ export default function ManageTipsGuidelines() {
 
   async function load() {
     setLoading(true)
+    let nicheQuery = supabase.from('niches').select('id,name').order('name')
+    let tipQuery = supabase.from('tips').select('*').order('created_at', { ascending: false })
+    let guidelineQuery = supabase.from('guidelines').select('*').order('created_at', { ascending: false })
+
+    if (!isSuperAdmin) {
+      if (user?.id) {
+        nicheQuery = nicheQuery.eq('creator_id', user.id)
+        tipQuery = tipQuery.eq('creator_id', user.id)
+        guidelineQuery = guidelineQuery.eq('creator_id', user.id)
+      }
+    } else {
+      if (selectedAdminId === 'mine') {
+        nicheQuery = nicheQuery.eq('creator_id', user?.id)
+        tipQuery = tipQuery.eq('creator_id', user?.id)
+        guidelineQuery = guidelineQuery.eq('creator_id', user?.id)
+      } else if (selectedAdminId && selectedAdminId !== 'all') {
+        nicheQuery = nicheQuery.eq('creator_id', selectedAdminId)
+        tipQuery = tipQuery.eq('creator_id', selectedAdminId)
+        guidelineQuery = guidelineQuery.eq('creator_id', selectedAdminId)
+      }
+    }
+
     const [n, t, g] = await Promise.all([
-      supabase.from('niches').select('id,name').order('name'),
-      supabase.from('tips').select('*').order('created_at', { ascending: false }),
-      supabase.from('guidelines').select('*').order('created_at', { ascending: false }),
+      nicheQuery,
+      tipQuery,
+      guidelineQuery,
     ])
     setNiches(n.data ?? [])
     setTips(t.data ?? [])
@@ -34,7 +58,7 @@ export default function ManageTipsGuidelines() {
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [isSuperAdmin, user?.id, selectedAdminId])
 
   function openCreate() {
     setForm({ niche_id: '', title: '', text: '', file_url: '', file_name: '' })
@@ -52,12 +76,14 @@ export default function ManageTipsGuidelines() {
           niche_id: form.niche_id || null,
           file_url: form.file_url || '',
           file_name: form.file_name || '',
+          creator_id: user?.id,
         }
       : {
           text: form.text,
           niche_id: form.niche_id || null,
           file_url: form.file_url || '',
           file_name: form.file_name || '',
+          creator_id: user?.id,
         }
     await supabase.from(table).insert(payload)
     setSaving(false)

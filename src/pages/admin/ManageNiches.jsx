@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Pencil, Trash2, FolderCog, ImageIcon, Video, UploadCloud, Users, Lightbulb, ScrollText, Check, Lock, FileText } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
+import { useAuth } from '../../context/AuthContext'
 import AdminShell from '../../components/AdminShell'
 import Loader from '../../components/Loader'
 import EmptyState from '../../components/EmptyState'
@@ -28,6 +29,7 @@ const emptyForm = {
 }
 
 export default function ManageNiches() {
+  const { user, isSuperAdmin, selectedAdminId } = useAuth()
   const [niches, setNiches] = useState([])
   const [profiles, setProfiles] = useState([])
   const [nicheAccessMap, setNicheAccessMap] = useState({})
@@ -42,9 +44,28 @@ export default function ManageNiches() {
 
   async function load() {
     setLoading(true)
+    let nicheQuery = supabase.from('niches').select('*').order('created_at', { ascending: false })
+    let profileQuery = supabase.from('profiles').select('id, name, email, role, created_by_admin_id').order('name')
+
+    if (!isSuperAdmin) {
+      if (user?.id) {
+        nicheQuery = nicheQuery.eq('creator_id', user.id)
+        profileQuery = profileQuery.eq('created_by_admin_id', user.id)
+      }
+    } else {
+      // Superadmin workspace filter
+      if (selectedAdminId === 'mine') {
+        nicheQuery = nicheQuery.eq('creator_id', user?.id)
+        profileQuery = profileQuery.eq('created_by_admin_id', user?.id)
+      } else if (selectedAdminId && selectedAdminId !== 'all') {
+        nicheQuery = nicheQuery.eq('creator_id', selectedAdminId)
+        profileQuery = profileQuery.eq('created_by_admin_id', selectedAdminId)
+      }
+    }
+
     const [nichesRes, profilesRes, accessRes] = await Promise.all([
-      supabase.from('niches').select('*').order('created_at', { ascending: false }),
-      supabase.from('profiles').select('id, name, email, role').order('name'),
+      nicheQuery,
+      profileQuery,
       supabase.from('niche_access').select('*'),
     ])
 
@@ -57,12 +78,12 @@ export default function ManageNiches() {
     }
 
     setNiches(nichesRes.data ?? [])
-    setProfiles((profilesRes.data ?? []).filter((p) => p.role !== 'admin'))
+    setProfiles((profilesRes.data ?? []).filter((p) => p.role !== 'admin' && p.role !== 'superadmin'))
     setNicheAccessMap(accMap)
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [isSuperAdmin, user?.id, selectedAdminId])
 
   function openCreate() {
     setEditingId(null)
@@ -141,7 +162,11 @@ export default function ManageNiches() {
     if (editingId) {
       await supabase.from('niches').update(finalForm).eq('id', editingId)
     } else {
-      const { data: created, error: createErr } = await supabase.from('niches').insert(finalForm).select().single()
+      const payload = {
+        ...finalForm,
+        creator_id: user?.id,
+      }
+      const { data: created, error: createErr } = await supabase.from('niches').insert(payload).select().single()
       if (createErr || !created) {
         console.warn('Insert niche error:', createErr)
         setSaving(false)

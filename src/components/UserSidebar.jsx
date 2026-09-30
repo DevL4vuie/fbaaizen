@@ -92,7 +92,7 @@ function SidebarContent({ onClose }) {
 
       <NavLinks links={userLinks} onClick={onClose} />
 
-      {profile?.role === 'admin' && (
+      {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
         <div className="px-3 pb-3">
           <NavLink
             to="/admin"

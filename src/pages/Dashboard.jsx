@@ -14,7 +14,7 @@ import Modal from '../components/Modal'
 import Button from '../components/Button'
 
 export default function Dashboard() {
-  const { user, isAdmin } = useAuth()
+  const { user, profile, isAdmin, isSuperAdmin, creatorId } = useAuth()
   const [niches, setNiches] = useState([])
   const [lockedMap, setLockedMap] = useState({})
   const [courses, setCourses] = useState([])
@@ -26,17 +26,30 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function load() {
+      let nicheQuery = supabase.from('niches').select('*').order('created_at', { ascending: false })
+      let courseQuery = supabase.from('courses').select('*').order('created_at', { ascending: false })
+      let tipQuery = supabase.from('tips').select('*').is('niche_id', null).order('created_at', { ascending: false })
+      let annQuery = supabase.from('announcements').select('*').order('is_pinned', { ascending: false }).order('created_at', { ascending: false }).limit(3)
+
+      // If user belongs to a specific creator admin, scope to that creator's content
+      if (!isSuperAdmin && creatorId) {
+        nicheQuery = nicheQuery.eq('creator_id', creatorId)
+        courseQuery = courseQuery.eq('creator_id', creatorId)
+        tipQuery = tipQuery.eq('creator_id', creatorId)
+        annQuery = annQuery.eq('creator_id', creatorId)
+      }
+
       const [nichesRes, coursesRes, tipsRes, progressRes] = await Promise.all([
-        supabase.from('niches').select('*').order('created_at', { ascending: false }),
-        supabase.from('courses').select('*').order('created_at', { ascending: false }),
-        supabase.from('tips').select('*').is('niche_id', null).order('created_at', { ascending: false }),
+        nicheQuery,
+        courseQuery,
+        tipQuery,
         supabase.from('progress').select('*').eq('user_id', user.id),
       ])
 
       // Load announcements separately (table may not exist yet)
       let annData = []
       try {
-        const annRes = await supabase.from('announcements').select('*').order('is_pinned', { ascending: false }).order('created_at', { ascending: false }).limit(3)
+        const annRes = await annQuery
         if (!annRes.error) annData = annRes.data ?? []
       } catch (e) {
         console.warn('Announcements table may not exist:', e)
